@@ -1,0 +1,21 @@
+forced_login_method = "chatgpt"
+cli_auth_credentials_store = "file"
+mcp_oauth_credentials_store = "file"
+
+[features]
+apps = false
+plugins = false
+remote_plugin = false
+memories = true
+external_agent_memory_import = false
+skill_mcp_dependency_install = false
+
+[apps._default]
+enabled = false
+
+[memories]
+use_memories = true
+generate_memories = true
+
+[skills.bundled]
+enabled = false

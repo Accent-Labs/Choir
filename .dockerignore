@@ -1,0 +1,6 @@
+**
+!Dockerfile
+!resources/
+!resources/codex/
+!resources/codex/config.toml
+!resources/entrypoint.sh
