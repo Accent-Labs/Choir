@@ -16,6 +16,19 @@ container build --platform linux/arm64 --tag choir .
 Override the Dockerfile’s Codex pin with `--build-arg CODEX_VERSION=<version>`.
 For a headless Mac mini, enable Remote Login and keep the Mac awake.
 
+### Prebuilt image
+
+Instead of building, pull the image that CI publishes to GitHub Container
+Registry on every push to `main` (`latest`, `sha-<commit>`) and `v*` tag. The
+package is private: log in with your GitHub username and a personal access token
+with `read:packages`, then pull and tag it as `choir`:
+
+```sh
+container registry login ghcr.io
+container image pull ghcr.io/accent-labs/choir:latest
+container image tag ghcr.io/accent-labs/choir:latest choir
+```
+
 ## Create and authenticate
 
 Choose an agent name and instructions. Run in the same shell:
