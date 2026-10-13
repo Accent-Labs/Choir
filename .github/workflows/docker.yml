@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
+      - run: python3 tests/test_cli.py
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         if: github.event_name != 'pull_request'
@@ -50,6 +51,26 @@ jobs:
           docker run --detach --name choir-smoke --network none --cap-drop ALL "$IMAGE"
           for attempt in {1..30}; do
             if docker exec choir-smoke test -S /home/worker/.codex/app-server-control/app-server-control.sock; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
+      - name: Verify Docker CLI
+        env:
+          CHOIR_RUNTIME: docker
+          CHOIR_IMAGE: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+          CHOIR_HOME: ${{ runner.temp }}/choir-cli-check
+        run: |
+          trap 'docker logs choir-cli-check; docker rm -f choir-cli-check' EXIT
+          bin/choir create cli-check --instructions 'Disposable CLI verification persona.'
+          bin/choir start cli-check
+          bin/choir start cli-check
+          docker stop choir-cli-check
+          bin/choir start cli-check
+          test "$(cat "$CHOIR_HOME/agents/cli-check/.codex/AGENTS.md")" = 'Disposable CLI verification persona.'
+          for attempt in {1..30}; do
+            if docker exec choir-cli-check test -S /home/worker/.codex/app-server-control/app-server-control.sock; then
               exit 0
             fi
             sleep 1
