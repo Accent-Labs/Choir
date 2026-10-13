@@ -1,0 +1,95 @@
+#!/bin/sh
+set -eu
+umask 077
+
+usage() {
+    echo 'Usage: choir create NAME --instructions TEXT | choir {login|start|pair} NAME'
+}
+
+fail() {
+    echo "choir: $*" >&2
+    exit 1
+}
+
+case "${1:-}" in
+    -h|--help) usage; exit 0 ;;
+    create) [ "$#" -eq 4 ] && [ "$3" = --instructions ] && [ -n "$4" ] || { usage >&2; exit 1; } ;;
+    login|start|pair) [ "$#" -eq 2 ] || { usage >&2; exit 1; } ;;
+    *) usage >&2; exit 1 ;;
+esac
+
+case "$2" in
+    ''|[!a-z0-9]*|*[!a-z0-9-]*) fail 'Names must start with a lowercase letter or digit and contain only lowercase letters, digits, and hyphens.' ;;
+esac
+
+CHOIR_HOME=${CHOIR_HOME:-"$HOME/.choir"}
+case "$CHOIR_HOME" in
+    /*) ;;
+    *) fail 'CHOIR_HOME must be an absolute path.' ;;
+esac
+case "$CHOIR_HOME" in
+    *,*) fail 'CHOIR_HOME cannot contain commas (container mount syntax).' ;;
+esac
+
+image=${CHOIR_IMAGE:-ghcr.io/accent-labs/choir}
+agent_home="$CHOIR_HOME/agents/$2"
+name="choir-$2"
+mount="type=bind,source=$agent_home,target=/home/worker"
+
+runtime=${CHOIR_RUNTIME:-}
+if [ -z "$runtime" ]; then
+    case "$(uname -s)" in
+        Darwin) runtime=container ;;
+        *) runtime=docker ;;
+    esac
+fi
+case "$runtime" in
+    container|docker) ;;
+    *) fail 'CHOIR_RUNTIME must be container or docker.' ;;
+esac
+command -v "$runtime" >/dev/null 2>&1 || fail "Install $runtime first."
+
+list_containers() {
+    case "$runtime" in
+        container) container list "$@" --quiet ;;
+        docker) docker ps "$@" --format '{{.Names}}' ;;
+    esac
+}
+
+if [ "$1" != create ]; then
+    [ -f "$agent_home/.codex/AGENTS.md" ] || fail "Create agent '$2' first."
+fi
+
+action=$1
+instructions=${4:-}
+set -- --cap-drop ALL --mount "$mount"
+if [ "$runtime" = docker ]; then
+    [ "$(id -u)" -ne 0 ] || fail 'Run Choir as a non-root user.'
+    # Linux bind mounts retain host ownership.
+    set -- "$@" --user "$(id -u):$(id -g)"
+fi
+
+case "$action" in
+    create)
+        mkdir -p "$agent_home"
+        exec "$runtime" run --rm --name "$name" --network none "$@" \
+            --env "CHOIR_INSTRUCTIONS=$instructions" "$image" true
+        ;;
+    login)
+        exec "$runtime" run --rm --interactive --tty "$@" "$image" codex login --device-auth
+        ;;
+    start)
+        running=$(list_containers)
+        if printf '%s\n' "$running" | grep -Fxq "$name"; then
+            exit 0
+        fi
+        containers=$(list_containers --all)
+        if printf '%s\n' "$containers" | grep -Fxq "$name"; then
+            exec "$runtime" start "$name"
+        fi
+        exec "$runtime" run --detach --name "$name" "$@" "$image"
+        ;;
+    pair)
+        exec "$runtime" exec "$name" codex remote-control pair
+        ;;
+esac

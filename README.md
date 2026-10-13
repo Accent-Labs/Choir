@@ -1,38 +1,40 @@
 # Choir
 
 Long-lived Codex agents with a persistent home per persona. The Linux image is
-runtime-agnostic; these commands use [Apple container](https://github.com/apple/container)
-on a supported Apple silicon Mac.
+runtime-agnostic. The `choir` CLI uses [Apple container](https://github.com/apple/container)
+on macOS and Docker on Linux. Set `CHOIR_RUNTIME=docker` to use Docker on a Mac.
 
 ## Setup
 
-Install Apple container and run as your regular user. The image is private; log
-in with a GitHub token that has `read:packages`:
+Install Apple container, clone this repository, and run as your regular user.
+The image is private; log in with a GitHub token that has `read:packages`:
 
 ```sh
+export PATH="$PWD/bin:$PATH"
 container system start
 container registry login ghcr.io
 ```
 
-To build locally instead, clone this repository, run
-`container build --platform linux/arm64 --tag choir .`, and use `choir` as the
-image below. Override the Codex pin with `--build-arg CODEX_VERSION=<version>`.
+Run these commands from the repository root. Add its `bin/` directory to your
+shell PATH to use `choir` elsewhere. Agent homes default to `$HOME/.choir/agents/`;
+set `CHOIR_HOME` to an absolute path to use another location. Names are machine-wide;
+use the same `CHOIR_HOME` for all commands.
+
+To build locally, run `container build --platform linux/arm64 --tag choir .` and
+`export CHOIR_IMAGE=choir`. Override the Codex pin with `--build-arg CODEX_VERSION=<version>`.
+For Docker, start your Docker engine and use `docker login ghcr.io` instead.
+The published image is ARM64-only. On x86, build with `docker build -t choir .`
+and `export CHOIR_IMAGE=choir` before creating an agent. Docker runs containers
+with your host UID/GID so the agent home stays writable; run Choir as a normal user.
 For a headless Mac mini, enable Remote Login and keep the Mac awake.
 
 ## Create and authenticate
 
-Choose an agent name and instructions. Run in the same shell:
+Choose a name and instructions:
 
 ```sh
-export CHOIR_HOME="$HOME/.choir"
-AGENT=marketing
-umask 077
-mkdir -p "$CHOIR_HOME/agents/$AGENT"
-
-container run --rm --name "choir-$AGENT" --interactive --tty --cap-drop ALL \
-  --mount "type=bind,source=$CHOIR_HOME/agents/$AGENT,target=/home/worker" \
-  --env 'CHOIR_INSTRUCTIONS=Help with marketing strategy and draft launch content for review.' \
-  ghcr.io/accent-labs/choir codex login --device-auth
+choir create marketing --instructions "Help with marketing strategy and draft launch content for review."
+choir login marketing
 ```
 
 Open the displayed URL in your browser. You may need to enable device-code login
@@ -44,29 +46,27 @@ Configuration, instructions, and a workspace are created automatically.
 After authentication, start the agent in the background and request a pairing code:
 
 ```sh
-container run --detach --name "choir-$AGENT" --cap-drop ALL \
-  --mount "type=bind,source=$CHOIR_HOME/agents/$AGENT,target=/home/worker" \
-  ghcr.io/accent-labs/choir
-
-container exec "choir-$AGENT" codex remote-control pair
+choir start marketing
+choir pair marketing
 ```
 
 In ChatGPT on your iPhone, open Codex/Remote and enter the code using the same
 account and workspace. Choose `/home/worker/workspace` for new tasks or reopen a
 saved conversation. You can disconnect SSH; keep the Mac awake and online.
-If pairing fails during startup, check `container logs "choir-$AGENT"` and retry.
+If pairing fails during startup, check `container logs choir-marketing` and retry.
 
-Stop with `container stop "choir-$AGENT"`; restart with
-`container start "choir-$AGENT"`. After a Mac reboot, log in, set `AGENT` again,
-run `container system start`, then start the container. Automatic startup is not
-implemented. Use one running container per agent.
+Stop with `container stop choir-marketing`; restart with `choir start marketing`.
+After a reboot, start Apple container or your Docker engine, then run
+`choir start marketing`. Automatic startup is not implemented. With Docker,
+substitute `docker` for the direct `container stop`, `logs`, and `exec` commands.
+Use one running container per agent.
 
 Remote control is experimental; recheck the internal app-server
 `--remote-control` flag when upgrading Codex.
 
 ## Persistent state
 
-Everything lives under `$CHOIR_HOME/agents/$AGENT`:
+Everything lives under `$HOME/.choir/agents/marketing` (or your `CHOIR_HOME`):
 
 - `.codex/`: configuration, persona instructions (`AGENTS.md`), credentials,
   conversations, and built-in memory.
@@ -96,7 +96,7 @@ enable `features.memories`, `memories.use_memories`, and
 Account apps, plugins, and bundled skills are disabled by default. To configure
 [MCP servers](https://learn.chatgpt.com/docs/extend/mcp) or reviewed
 [local plugins](https://developers.openai.com/plugins/build/plugins), run the
-appropriate command via `container exec "choir-$AGENT" codex mcp` or
-`container exec "choir-$AGENT" codex plugin`.
+appropriate command via `container exec choir-marketing codex mcp` or
+`container exec choir-marketing codex plugin`.
 Local plugins also require `features.plugins = true`. Use container paths when
 configuring tools; the agent home is `/home/worker`.
