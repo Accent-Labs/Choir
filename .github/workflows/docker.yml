@@ -27,6 +27,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
+          flavor: latest=false
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -36,8 +37,29 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           platforms: linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Verify startup
+        env:
+          IMAGE: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+        run: |
+          trap 'docker logs choir-smoke; docker rm -f choir-smoke' EXIT
+          docker run --detach --name choir-smoke --network none --cap-drop ALL "$IMAGE"
+          for attempt in {1..30}; do
+            if docker exec choir-smoke test -S /home/worker/.codex/app-server-control/app-server-control.sock; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
+      - name: Publish verified image
+        if: github.event_name != 'pull_request'
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          while IFS= read -r tag; do
+            docker push "$tag"
+          done <<< "$TAGS"

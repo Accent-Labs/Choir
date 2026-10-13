@@ -80,8 +80,10 @@ is asynchronous; keep important task progress in workspace files too.
 
 Keep agent directories and backups private and outside Git. Do not put secrets
 in `CHOIR_INSTRUCTIONS`. Removing a container does not remove its mounted home.
-Before upgrades, finish tasks and back up the agent directory; pull or rebuild
-and reuse the same mount. Keep the previous image and backup for rollback.
+Before upgrades, finish tasks, stop the agent, and back up its directory. Pull or
+rebuild the image, then remove and recreate the container using the same mount;
+restarting it alone does not update the image. Keep the previous image and backup
+for rollback.
 
 ## Configuration
 
