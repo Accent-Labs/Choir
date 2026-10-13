@@ -41,18 +41,28 @@ Configuration, instructions, and a workspace are created automatically.
 
 ## Run and resume
 
-Start a conversation and enter your task:
+After authentication, start the agent in the background and request a pairing code:
 
 ```sh
-container run --rm --name "choir-$AGENT" --interactive --tty --cap-drop ALL \
+container run --detach --name "choir-$AGENT" --cap-drop ALL \
   --mount "type=bind,source=$CHOIR_HOME/agents/$AGENT,target=/home/worker" \
   ghcr.io/accent-labs/choir
+
+container exec "choir-$AGENT" codex remote-control pair
 ```
 
-To continue a saved conversation, append `codex resume --strict-config` after
-the image. After restarting the Mac, log in, set `CHOIR_HOME` and `AGENT` again,
-start `container system start`, and resume. Automatic startup is not implemented.
-Use one running container per agent.
+In ChatGPT on your iPhone, open Codex/Remote and enter the code using the same
+account and workspace. Choose `/home/worker/workspace` for new tasks or reopen a
+saved conversation. You can disconnect SSH; keep the Mac awake and online.
+If pairing fails during startup, check `container logs "choir-$AGENT"` and retry.
+
+Stop with `container stop "choir-$AGENT"`; restart with
+`container start "choir-$AGENT"`. After a Mac reboot, log in, set `AGENT` again,
+run `container system start`, then start the container. Automatic startup is not
+implemented. Use one running container per agent.
+
+Remote control is experimental; recheck the internal app-server
+`--remote-control` flag when upgrading Codex.
 
 ## Persistent state
 
@@ -83,7 +93,8 @@ enable `features.memories`, `memories.use_memories`, and
 
 Account apps, plugins, and bundled skills are disabled by default. To configure
 [MCP servers](https://learn.chatgpt.com/docs/extend/mcp) or reviewed
-[local plugins](https://developers.openai.com/plugins/build/plugins), append the
-appropriate `codex mcp` or `codex plugin` command to the same run invocation.
+[local plugins](https://developers.openai.com/plugins/build/plugins), run the
+appropriate command via `container exec "choir-$AGENT" codex mcp` or
+`container exec "choir-$AGENT" codex plugin`.
 Local plugins also require `features.plugins = true`. Use container paths when
 configuring tools; the agent home is `/home/worker`.
