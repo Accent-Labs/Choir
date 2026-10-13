@@ -35,4 +35,4 @@ USER worker
 WORKDIR /home/worker
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/choir-entrypoint"]
-CMD ["codex", "--strict-config"]
+CMD ["codex", "app-server", "--remote-control", "--listen", "unix://", "--strict-config"]
