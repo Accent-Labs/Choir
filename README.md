@@ -1,7 +1,7 @@
 # Choir
 
-Long-lived Codex agents with a persistent home per persona. The Linux image is
-runtime-agnostic; these commands use [Apple container](https://github.com/apple/container)
+Long-lived Codex agents with a persistent home per persona. The OCI image works with compatible
+container runtimes; these commands use [Apple container](https://github.com/apple/container)
 on a supported Apple silicon Mac.
 
 ## Setup
@@ -16,7 +16,9 @@ container registry login ghcr.io
 
 To build locally instead, clone this repository, run
 `container build --platform linux/arm64 --tag choir .`, and use `choir` as the
-image below. Override the Codex pin with `--build-arg CODEX_VERSION=<version>`.
+image below. Override tool versions with `--build-arg CODEX_VERSION=<version>`
+or `--build-arg UV_VERSION=0.13.5`. For an immutable uv image, use
+`--build-arg UV_VERSION=0.13.5@sha256:<digest>`.
 For a headless Mac mini, enable Remote Login and keep the Mac awake.
 
 ## Create and authenticate
@@ -100,3 +102,7 @@ appropriate command via `container exec "choir-$AGENT" codex mcp` or
 `container exec "choir-$AGENT" codex plugin`.
 Local plugins also require `features.plugins = true`. Use container paths when
 configuring tools; the agent home is `/home/worker`.
+
+Python, uv, and Node/npm are available for optional per-agent integrations.
+See [Integrations](docs/integrations.md) for explicit installation, MCP
+configuration, authentication, validation, and upgrade instructions.
