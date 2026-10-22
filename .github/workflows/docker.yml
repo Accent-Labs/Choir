@@ -48,6 +48,22 @@ jobs:
         run: |
           trap 'docker logs choir-smoke; docker rm -f choir-smoke' EXIT
           docker run --detach --name choir-smoke --network none --cap-drop ALL "$IMAGE"
+          docker exec choir-smoke sh -ec '
+            test "$(id -u)" = 1001
+            python3 --version
+            uv --version
+            uvx --version
+            node --version
+            npm --version
+            test "$UV_PYTHON_DOWNLOADS" = never
+            case ":$PATH:" in
+              *:/home/worker/.local/bin:*) ;;
+              *) exit 1 ;;
+            esac
+            python3 -m venv /home/worker/runtime-smoke
+            /home/worker/runtime-smoke/bin/python -c "import ssl"
+            rm -rf /home/worker/runtime-smoke
+          '
           for attempt in {1..30}; do
             if docker exec choir-smoke test -S /home/worker/.codex/app-server-control/app-server-control.sock; then
               exit 0
