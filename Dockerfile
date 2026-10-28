@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1.7
 
-ARG CODEX_VERSION=0.162.1
-ARG UV_VERSION=0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff
+ARG CODEX_VERSION=0.165.0
+ARG UV_VERSION=0.13.6@sha256:af22a52f5eafef3d78e551599d405c02df61919d18028f0cea8eda93bc9986d0
 
 FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv-binaries
-FROM debian:trixie-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132
+FROM debian:trixie-slim@sha256:89c1ea91e897f0fe0a3731595330bc45b8bdef4047464a07116f891a94054b31
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
