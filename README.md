@@ -17,8 +17,8 @@ container registry login ghcr.io
 To build locally instead, clone this repository, run
 `container build --platform linux/arm64 --tag choir .`, and use `choir` as the
 image below. Override tool versions with `--build-arg CODEX_VERSION=<version>`
-or `--build-arg UV_VERSION=0.13.5`. For an immutable uv image, use
-`--build-arg UV_VERSION=0.13.5@sha256:<digest>`.
+or `--build-arg UV_VERSION=0.13.6`. For an immutable uv image, use
+`--build-arg UV_VERSION=0.13.6@sha256:<digest>`.
 For a headless Mac mini, enable Remote Login and keep the Mac awake.
 
 ## Create and authenticate

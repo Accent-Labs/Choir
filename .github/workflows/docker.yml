@@ -50,6 +50,7 @@ jobs:
           docker run --detach --name choir-smoke --network none --cap-drop ALL "$IMAGE"
           docker exec choir-smoke sh -ec '
             test "$(id -u)" = 1001
+            codex --version
             python3 --version
             uv --version
             uvx --version
@@ -66,6 +67,7 @@ jobs:
           '
           for attempt in {1..30}; do
             if docker exec choir-smoke test -S /home/worker/.codex/app-server-control/app-server-control.sock; then
+              docker exec choir-smoke codex features list | grep '^code_mode_tool_description_first '
               exit 0
             fi
             sleep 1
