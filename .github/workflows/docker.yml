@@ -50,6 +50,7 @@ jobs:
           docker run --detach --name choir-smoke --network none --cap-drop ALL "$IMAGE"
           docker exec choir-smoke sh -ec '
             test "$(id -u)" = 1001
+            codex --version
             python3 --version
             uv --version
             uvx --version
